@@ -23,13 +23,13 @@ type DashboardShellProps = {
 
 const sidebarItems: SidebarNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Make Deposit", href: "#", icon: Wallet },
-  { label: "Deposit History", href: "#", icon: History },
-  { label: "Investment Plans", href: "#plans", icon: NotebookTabs },
-  { label: "Investment History", href: "#", icon: ScanSearch },
-  { label: "Request withdrawal", href: "#", icon: HandCoins },
-  { label: "withdrawal History", href: "#", icon: CircleDollarSign },
-  { label: "Refer a Friend", href: "#", icon: UserPlus },
+  { label: "Make Deposit", href: "/dashboard/deposit", icon: Wallet },
+  { label: "Deposit History", href: "/dashboard/deposit-history", icon: History },
+  { label: "Investment Plans", href: "/dashboard/investment-plans", icon: NotebookTabs },
+  { label: "Investment History", href: "/dashboard/investment-history", icon: ScanSearch },
+  { label: "Request withdrawal", href: "/dashboard/request-withdrawal", icon: HandCoins },
+  { label: "withdrawal History", href: "/dashboard/withdrawal-history", icon: CircleDollarSign },
+  { label: "Refer a Friend", href: "/dashboard/refer", icon: UserPlus },
 ];
 
 export function DashboardShell({ username, children }: DashboardShellProps) {
@@ -38,7 +38,7 @@ export function DashboardShell({ username, children }: DashboardShellProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block">
-        <SidebarNav items={sidebarItems} activeItem="Dashboard" />
+        <SidebarNav items={sidebarItems} />
       </div>
 
       <div className="md:pl-72">
@@ -70,7 +70,6 @@ export function DashboardShell({ username, children }: DashboardShellProps) {
             </div>
             <SidebarNav
               items={sidebarItems}
-              activeItem="Dashboard"
               showLogo={false}
               className="h-[calc(100%-3.5rem)] border-r"
               onNavigate={() => setMobileOpen(false)}

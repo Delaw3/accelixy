@@ -11,9 +11,15 @@ type SafeAuthUser = {
   username: string;
   email: string;
   emailVerified: Date | null;
+  role: "USER" | "ADMIN";
   country: string;
   phone: string;
 };
+
+function normalizeRole(role: unknown): "USER" | "ADMIN" {
+  const value = String(role ?? "").trim().toUpperCase();
+  return value === "ADMIN" ? "ADMIN" : "USER";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.JWT_SECRET,
@@ -44,9 +50,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await User.findOne({
           $or: [{ email: identifier }, { username: identifier }],
-        }).select("+password");
+        }).select("+password role isActive");
 
-        if (!user?.password) {
+        if (!user?.password || user.isActive === false) {
           return null;
         }
 
@@ -63,6 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           username: user.username,
           email: user.email,
           emailVerified: null,
+          role: normalizeRole(user.role),
           country: user.country,
           phone: user.phone,
         };
@@ -72,9 +79,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.user = user as SafeAuthUser;
+      }
+
+      if (trigger === "update" && session?.user && token.user) {
+        const nextUser = session.user as Partial<SafeAuthUser>;
+        token.user = {
+          ...(token.user as SafeAuthUser),
+          firstname: nextUser.firstname ?? (token.user as SafeAuthUser).firstname,
+          lastname: nextUser.lastname ?? (token.user as SafeAuthUser).lastname,
+          username: nextUser.username ?? (token.user as SafeAuthUser).username,
+          role: normalizeRole(nextUser.role ?? (token.user as SafeAuthUser).role),
+          country: nextUser.country ?? (token.user as SafeAuthUser).country,
+          phone: nextUser.phone ?? (token.user as SafeAuthUser).phone,
+        };
       }
 
       return token;

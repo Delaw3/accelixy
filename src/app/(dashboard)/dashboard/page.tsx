@@ -1,51 +1,50 @@
 import { CircleDollarSign, PiggyBank, TrendingUp, Wallet } from "lucide-react";
 import { auth } from "@/auth";
-import { AssetCard } from "@/components/dashboard/AssetCard";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TransactionNotifications } from "@/components/dashboard/TransactionNotifications";
 import { WalletReminder } from "@/components/dashboard/WalletReminder";
+import { CoinConverter } from "@/components/market/CoinConverter";
+import { TradingViewTickerTape } from "@/components/market/TradingViewTickerTape";
 import { connectDB } from "@/lib/db/mongoose";
 import User from "@/lib/models/user.model";
+import TransactionNotification from "@/lib/models/transaction-notification.model";
+import UserWalletAddress from "@/lib/models/user-wallet-address.model";
+import UserWallet from "@/lib/models/user-wallet.model";
+import UserStats from "@/lib/models/user-stats.model";
+import { getDashboardFinancialStats } from "@/lib/services/dashboard";
 
-const walletStat = { label: "Wallet Balance", value: "$0.00", icon: Wallet };
-
-const compactStats = [
-  { label: "Current Investment", value: "$0", icon: PiggyBank },
-  { label: "Total Earnings", value: "$0", icon: TrendingUp },
-  { label: "Total Withdrawals", value: "$0", icon: CircleDollarSign },
+const paymentTickerSymbols = [
+  { proName: "COINBASE:BTCUSD", title: "BTC/USD" },
+  { proName: "BINANCE:BTCUSDT", title: "BTC/USDT" },
+  { proName: "CRYPTOCAP:USDT", title: "USDT" },
 ];
 
-const assets = [
-  { name: "Ripple", symbol: "XRP", value: "$0", change: "-2.37%" },
-  { name: "Stellar", symbol: "XLM", value: "$0", change: "-2.00%" },
-  { name: "Ethereum", symbol: "ETH", value: "$0", change: "-4.77%" },
-  { name: "Bitcoin", symbol: "BTC", value: "$0", change: "-4.54%" },
-  { name: "Dogecoin", symbol: "DOGE", value: "$0", change: "-2.40%" },
-];
+function formatMoney(value: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
 
-const transactionNotifications = [
-  {
-    id: "TXN-1001",
-    type: "deposit" as const,
-    message: "Deposit received into wallet",
-    amount: "+$350.00",
-    time: "2 mins ago",
-  },
-  {
-    id: "TXN-1002",
-    type: "investment" as const,
-    message: "New plan investment created",
-    amount: "$1,200.00",
-    time: "14 mins ago",
-  },
-  {
-    id: "TXN-1003",
-    type: "withdrawal" as const,
-    message: "Withdrawal request submitted",
-    amount: "-$500.00",
-    time: "1 hour ago",
-  },
-];
+function formatRelativeTime(value: Date | undefined) {
+  if (!value) {
+    return "Just now";
+  }
+
+  const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000);
+  if (seconds < 60) {
+    return "Just now";
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)} mins ago`;
+  }
+  if (seconds < 86400) {
+    return `${Math.floor(seconds / 3600)} hours ago`;
+  }
+  return `${Math.floor(seconds / 86400)} days ago`;
+}
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -57,27 +56,90 @@ export default async function DashboardPage() {
     usdtTRC20: "",
     usdtBEP20: "",
   };
+  let walletBalance = 0;
+  let walletCurrency = "USD";
+  let totalEarnings = 0;
+  let currentInvestment = 0;
+  let totalWithdrawals = 0;
+  let transactionNotifications: {
+    id: string;
+    type: "deposit" | "withdrawal" | "investment";
+    message: string;
+    amount: string;
+    time: string;
+  }[] = [];
 
   if (userId) {
     await connectDB();
-    const user = await User.findById(userId)
-      .select("firstname wallets")
-      .lean<{
-        firstname?: string;
-        wallets?: {
-          bitcoinBTC?: string;
-          usdtTRC20?: string;
-          usdtBEP20?: string;
-        };
-      }>();
+    const [user, walletAddress, wallet, stats, computed, notifications] = await Promise.all([
+      User.findById(userId)
+        .select("firstname")
+        .lean<{ firstname?: string }>(),
+      UserWalletAddress.findOne({ userId }).lean<{
+        bitcoinBTC?: string;
+        usdtTRC20?: string;
+        usdtBEP20?: string;
+      }>(),
+      UserWallet.findOne({ userId }).lean<{ balance?: number; currency?: "USD" }>(),
+      UserStats.findOne({ userId }).lean<{
+        totalEarnings?: number;
+      }>(),
+      getDashboardFinancialStats(userId),
+      TransactionNotification.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .lean<{
+          _id: { toString: () => string };
+          type: "deposit" | "withdrawal" | "investment";
+          message: string;
+          amount: number;
+          createdAt?: Date;
+        }[]>(),
+    ]);
 
     firstname = user?.firstname ?? firstname;
     wallets = {
-      bitcoinBTC: user?.wallets?.bitcoinBTC ?? "",
-      usdtTRC20: user?.wallets?.usdtTRC20 ?? "",
-      usdtBEP20: user?.wallets?.usdtBEP20 ?? "",
+      bitcoinBTC: walletAddress?.bitcoinBTC ?? "",
+      usdtTRC20: walletAddress?.usdtTRC20 ?? "",
+      usdtBEP20: walletAddress?.usdtBEP20 ?? "",
     };
+    walletBalance = wallet?.balance ?? 0;
+    walletCurrency = wallet?.currency ?? "USD";
+    totalEarnings = stats?.totalEarnings ?? 0;
+    currentInvestment = computed.currentInvestment;
+    totalWithdrawals = computed.totalWithdrawals;
+    transactionNotifications = notifications.map((item) => ({
+      id: item._id.toString(),
+      type: item.type,
+      message: item.message,
+      amount: formatMoney(item.amount, walletCurrency),
+      time: formatRelativeTime(item.createdAt),
+    }));
   }
+
+  const walletStat = {
+    label: "Wallet Balance",
+    value: formatMoney(walletBalance, walletCurrency),
+    icon: Wallet,
+  };
+
+  const compactStats = [
+    {
+      label: "Current Investment",
+      value: formatMoney(currentInvestment, walletCurrency),
+      icon: PiggyBank,
+    },
+    {
+      label: "Total Earnings",
+      value: formatMoney(totalEarnings, walletCurrency),
+      icon: TrendingUp,
+    },
+    {
+      label: "Total Withdrawals",
+      value: formatMoney(totalWithdrawals, walletCurrency),
+      icon: CircleDollarSign,
+    },
+  ];
 
   const hasAtLeastOneWallet = Boolean(
     wallets.bitcoinBTC || wallets.usdtTRC20 || wallets.usdtBEP20,
@@ -134,23 +196,25 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <TransactionNotifications items={transactionNotifications} />
+      {transactionNotifications.length > 0 ? (
+        <TransactionNotifications
+          items={transactionNotifications.slice(0, 6)}
+          viewAllHref="/dashboard/transaction-notifications"
+          showClearButton
+        />
+      ) : null}
 
-      <section>
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">Market / Assets</h2>
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold">Coin Converter</h2>
+          <p className="text-sm text-muted">Convert payment coins using live market rates.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {assets.map((asset) => (
-            <AssetCard
-              key={asset.symbol}
-              name={asset.name}
-              symbol={asset.symbol}
-              value={asset.value}
-              change={asset.change}
-            />
-          ))}
-        </div>
+        <CoinConverter />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">Payment Coins</h2>
+        <TradingViewTickerTape symbols={paymentTickerSymbols} />
       </section>
     </div>
   );

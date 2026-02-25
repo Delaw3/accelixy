@@ -2,7 +2,12 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db/mongoose";
 import { handleApiError } from "@/lib/http/api-error";
+import Referral from "@/lib/models/referral.model";
 import User from "@/lib/models/user.model";
+import UserStats from "@/lib/models/user-stats.model";
+import UserWallet from "@/lib/models/user-wallet.model";
+import UserWalletAddress from "@/lib/models/user-wallet-address.model";
+import { generateReferralCode } from "@/lib/referrals/referral-code";
 import { registerSchema } from "@/lib/validators/auth";
 
 export async function POST(request: Request) {
@@ -13,12 +18,15 @@ export async function POST(request: Request) {
     const payload = registerSchema.parse(body);
     const { confirmPassword: _confirmPassword, ...parsedUserData } = payload;
     void _confirmPassword;
+    const referralCodeInput = parsedUserData.referralCode?.trim().toUpperCase() || "";
+    const { referralCode: _ignoredReferralCode, ...restUserData } = parsedUserData;
+    void _ignoredReferralCode;
     const userData = {
-      ...parsedUserData,
-      firstname: parsedUserData.firstname.trim().toLowerCase(),
-      lastname: parsedUserData.lastname.trim().toLowerCase(),
-      email: parsedUserData.email.trim().toLowerCase(),
-      username: parsedUserData.username.trim().toLowerCase(),
+      ...restUserData,
+      firstname: restUserData.firstname.trim().toLowerCase(),
+      lastname: restUserData.lastname.trim().toLowerCase(),
+      email: restUserData.email.trim().toLowerCase(),
+      username: restUserData.username.trim().toLowerCase(),
     };
 
     const existingUser = await User.findOne({
@@ -33,12 +41,62 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(userData.password, 12);
+    const generatedReferralCode = await generateReferralCode();
+    let referrerId: string | null = null;
+
+    if (referralCodeInput) {
+      const referrer = await User.findOne({ referralCode: referralCodeInput })
+        .select("_id")
+        .lean<{ _id: { toString: () => string } } | null>();
+
+      if (!referrer) {
+        return NextResponse.json(
+          { ok: false, message: "Invalid referral code" },
+          { status: 400 }
+        );
+      }
+
+      referrerId = referrer._id.toString();
+    }
 
     const user = await User.create({
       ...userData,
       password: hashedPassword,
-      role: "client",
+      role: "USER",
+      isActive: true,
+      referralCode: generatedReferralCode,
+      referredBy: referrerId,
+      referralRewardPaid: false,
+      referralFirstDepositRewardedAt: null,
     });
+
+    await Promise.all([
+      UserWallet.create({
+        userId: user._id,
+        balance: 0,
+        currency: "USD",
+      }),
+      UserStats.create({
+        userId: user._id,
+        totalEarnings: 0,
+        totalWithdrawals: 0,
+      }),
+      UserWalletAddress.create({
+        userId: user._id,
+        bitcoinBTC: "",
+        usdtTRC20: "",
+        usdtBEP20: "",
+      }),
+    ]);
+
+    if (referrerId) {
+      await Referral.create({
+        referrerId,
+        referredUserId: user._id,
+        code: referralCodeInput,
+        rewardStatus: "PENDING",
+      });
+    }
 
     return NextResponse.json(
       {
@@ -54,6 +112,7 @@ export async function POST(request: Request) {
             country: user.country,
             phone: user.phone,
             role: user.role,
+            referralCode: user.referralCode,
           },
         },
       },

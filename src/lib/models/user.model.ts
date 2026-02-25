@@ -1,4 +1,4 @@
-import mongoose, { HydratedDocument, Model, Schema } from "mongoose";
+import mongoose, { HydratedDocument, Model, Schema, Types } from "mongoose";
 
 export interface IUser {
   firstname: string;
@@ -8,12 +8,12 @@ export interface IUser {
   country: string;
   phone: string;
   password: string;
-  role: "admin" | "client";
-  wallets: {
-    bitcoinBTC?: string;
-    usdtTRC20?: string;
-    usdtBEP20?: string;
-  };
+  role: "USER" | "ADMIN";
+  isActive: boolean;
+  referralCode: string;
+  referredBy?: Types.ObjectId | null;
+  referralRewardPaid: boolean;
+  referralFirstDepositRewardedAt?: Date | null;
 }
 
 export type UserDocument = HydratedDocument<IUser>;
@@ -63,29 +63,38 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["admin", "client"],
-      default: "client",
+      enum: ["USER", "ADMIN"],
+      default: "USER",
       required: true,
     },
-    wallets: {
-      type: new Schema(
-        {
-          bitcoinBTC: {
-            type: String,
-            trim: true,
-          },
-          usdtTRC20: {
-            type: String,
-            trim: true,
-          },
-          usdtBEP20: {
-            type: String,
-            trim: true,
-          },
-        },
-        { _id: false }
-      ),
-      default: {},
+    isActive: {
+      type: Boolean,
+      default: true,
+      required: true,
+      index: true,
+    },
+    referralCode: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      uppercase: true,
+      trim: true,
+    },
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+    referralRewardPaid: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
+    referralFirstDepositRewardedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -98,7 +107,12 @@ const existingModel = mongoose.models.User as Model<IUser> | undefined;
 // In dev/hot-reload, mongoose may keep an older cached schema without new fields.
 if (
   existingModel &&
-  (!existingModel.schema.path("role") || !existingModel.schema.path("wallets"))
+  (
+    !existingModel.schema.path("role") ||
+    !existingModel.schema.path("isActive") ||
+    !existingModel.schema.path("referralCode") ||
+    !existingModel.schema.path("referredBy")
+  )
 ) {
   delete mongoose.models.User;
 }

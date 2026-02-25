@@ -22,6 +22,12 @@ export const registerSchema = z.object({
     .min(6, "Password must be at least 8 characters")
     .max(128, "Password is too long"),
   confirmPassword: z.string().min(1, "Confirm password is required"),
+  referralCode: z
+    .string()
+    .trim()
+    .max(32, "Referral code is too long")
+    .optional()
+    .or(z.literal("")),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],

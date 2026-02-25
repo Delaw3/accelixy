@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { connectDB } from "@/lib/db/mongoose";
-import User from "@/lib/models/user.model";
+import UserWalletAddress from "@/lib/models/user-wallet-address.model";
 
 const walletPayloadSchema = z.object({
   bitcoinBTC: z.string().max(200).optional(),
@@ -54,11 +54,45 @@ export async function PATCH(request: Request) {
 
   await connectDB();
 
-  await User.findByIdAndUpdate(session.user.id, { $set: { wallets } });
+  await UserWalletAddress.findOneAndUpdate(
+    { userId: session.user.id },
+    { $set: wallets },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
 
   return NextResponse.json({
     ok: true,
     message: "Wallets updated successfully",
     data: { wallets },
+  });
+}
+
+export async function GET() {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { ok: false, message: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+
+  await connectDB();
+
+  const walletDoc = await UserWalletAddress.findOne({ userId: session.user.id }).lean<{
+    bitcoinBTC?: string;
+    usdtTRC20?: string;
+    usdtBEP20?: string;
+  } | null>();
+
+  return NextResponse.json({
+    ok: true,
+    data: {
+      wallets: {
+        bitcoinBTC: walletDoc?.bitcoinBTC ?? "",
+        usdtTRC20: walletDoc?.usdtTRC20 ?? "",
+        usdtBEP20: walletDoc?.usdtBEP20 ?? "",
+      },
+    },
   });
 }

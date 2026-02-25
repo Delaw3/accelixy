@@ -7,6 +7,7 @@ type AppUser = {
   username: string;
   email: string;
   emailVerified: Date | null;
+  role: "USER" | "ADMIN";
   country: string;
   phone: string;
 };
@@ -19,6 +20,7 @@ declare module "next-auth" {
     username: string;
     email: string;
     emailVerified: Date | null;
+    role: "USER" | "ADMIN";
     country: string;
     phone: string;
   }

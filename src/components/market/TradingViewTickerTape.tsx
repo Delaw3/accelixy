@@ -2,8 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
-const TICKER_SYMBOLS = [
+type TickerSymbol = {
+  proName: string;
+  title: string;
+};
+
+const DEFAULT_TICKER_SYMBOLS: TickerSymbol[] = [
   { proName: "BINANCE:BTCUSDT", title: "BTCUSD" },
   { proName: "BINANCE:ETHUSDT", title: "ETHUSD" },
   { proName: "BINANCE:SOLUSDT", title: "SOLUSD" },
@@ -11,7 +17,15 @@ const TICKER_SYMBOLS = [
   { proName: "BINANCE:BNBUSDT", title: "BNBUSD" },
 ];
 
-export function TradingViewTickerTape() {
+type TradingViewTickerTapeProps = {
+  symbols?: TickerSymbol[];
+  className?: string;
+};
+
+export function TradingViewTickerTape({
+  symbols = DEFAULT_TICKER_SYMBOLS,
+  className,
+}: TradingViewTickerTapeProps) {
   const widgetRef = useRef<HTMLDivElement | null>(null);
   const { resolvedTheme } = useTheme();
 
@@ -33,7 +47,7 @@ export function TradingViewTickerTape() {
     script.async = true;
     script.type = "text/javascript";
     script.text = JSON.stringify({
-      symbols: TICKER_SYMBOLS,
+      symbols,
       showSymbolLogo: true,
       isTransparent: false,
       displayMode: "adaptive",
@@ -44,10 +58,10 @@ export function TradingViewTickerTape() {
     widgetContainer.appendChild(widget);
     widgetContainer.appendChild(script);
     widgetRef.current.appendChild(widgetContainer);
-  }, [resolvedTheme]);
+  }, [resolvedTheme, symbols]);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-background">
+    <section className={cn("overflow-hidden rounded-xl border border-border bg-background", className)}>
       <div
         ref={widgetRef}
         className="w-full [&_.tradingview-widget-container]:w-full [&_.tradingview-widget-container__widget]:w-full"

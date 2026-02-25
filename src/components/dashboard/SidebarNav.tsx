@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/layout/Logo";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +15,6 @@ export type SidebarNavItem = {
 
 type SidebarNavProps = {
   items: SidebarNavItem[];
-  activeItem: string;
   showLogo?: boolean;
   className?: string;
   onNavigate?: () => void;
@@ -22,11 +22,20 @@ type SidebarNavProps = {
 
 export function SidebarNav({
   items,
-  activeItem,
   showLogo = true,
   className,
   onNavigate,
 }: SidebarNavProps) {
+  const pathname = usePathname();
+  const activeHref =
+    items
+      .filter(
+        (item) =>
+          item.href !== "#" &&
+          (pathname === item.href || pathname.startsWith(`${item.href}/`)),
+      )
+      .sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "";
+
   return (
     <aside
       className={cn(
@@ -42,7 +51,7 @@ export function SidebarNav({
 
       <nav className="flex flex-col gap-1 md:flex-1">
         {items.map((item) => {
-          const isActive = item.label === activeItem;
+          const isActive = item.href === activeHref;
 
           return (
             <Link

@@ -21,6 +21,7 @@ const registerSchema = z
     phone: z.string().trim().min(5, "Phone is required"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Confirm password is required"),
+    referralCode: z.string().trim().max(32, "Referral code is too long").optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -54,6 +55,7 @@ export default function RegisterPage() {
       phone: "",
       password: "",
       confirmPassword: "",
+      referralCode: "",
     },
   });
   const usernameRegister = register("username");
@@ -242,6 +244,17 @@ export default function RegisterPage() {
               {...register("confirmPassword")}
             />
           </FormField>
+
+          <div className="md:col-span-2">
+            <FormField label="Referral Code (Optional)" error={errors.referralCode?.message}>
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm uppercase text-foreground outline-none focus:border-primary"
+                placeholder="ACCX-XXXXXX"
+                {...register("referralCode")}
+              />
+            </FormField>
+          </div>
 
           <div className="md:col-span-2">
             {submitError ? <p className="mb-3 text-sm text-red-400">{submitError}</p> : null}

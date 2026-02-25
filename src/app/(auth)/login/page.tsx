@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -50,8 +50,10 @@ export default function LoginPage() {
     }
 
     setSuccessMessage("Login successful. Redirecting...");
-    window.setTimeout(() => {
-      router.push("/dashboard");
+    window.setTimeout(async () => {
+      const session = await getSession();
+      const role = String(session?.user?.role ?? "USER").toUpperCase();
+      router.push(role === "ADMIN" ? "/admin" : "/dashboard");
     }, 900);
   };
 
