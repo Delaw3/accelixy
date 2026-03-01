@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/layout/Logo";
 import { SiteTranslator } from "@/components/layout/SiteTranslator";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -20,11 +21,14 @@ const navLinks = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const resolveHref = (href: string) => (isHome ? href : `/${href}`);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-1.5 md:px-6">
-        <Link href="#home" className="shrink-0" aria-label="Go to home">
+        <Link href={resolveHref("#home")} className="shrink-0" aria-label="Go to home">
           <Logo width={104} height={30} />
         </Link>
 
@@ -33,7 +37,7 @@ export function Navbar() {
             {navLinks.map((link) => (
               <li key={link.href}>
                 <Link
-                  href={link.href}
+                  href={resolveHref(link.href)}
                   className="text-sm text-muted transition hover:text-foreground"
                 >
                   {link.label}
@@ -79,7 +83,7 @@ export function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={resolveHref(link.href)}
               className="text-sm text-muted transition hover:text-foreground"
               onClick={() => setOpen(false)}
             >

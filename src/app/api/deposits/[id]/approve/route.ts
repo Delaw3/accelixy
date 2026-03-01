@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { normalizeRole } from "@/lib/auth/guards";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
 import DepositHistory from "@/lib/models/deposit-history.model";
 import Referral from "@/lib/models/referral.model";
@@ -36,6 +38,7 @@ export async function PATCH(_request: Request, { params }: Params) {
       creditedAmount: number;
       referralRewardAmount: number;
       referralRewarded: boolean;
+      userId: string;
     } | null = null;
 
     await dbSession.withTransaction(async () => {
@@ -53,6 +56,7 @@ export async function PATCH(_request: Request, { params }: Params) {
           creditedAmount: deposit.amountUsd,
           referralRewardAmount: 0,
           referralRewarded: false,
+          userId: deposit.userId.toString(),
         };
         return;
       }
@@ -150,6 +154,7 @@ export async function PATCH(_request: Request, { params }: Params) {
         creditedAmount: deposit.amountUsd,
         referralRewardAmount,
         referralRewarded,
+        userId: deposit.userId.toString(),
       };
     });
 
@@ -157,10 +162,20 @@ export async function PATCH(_request: Request, { params }: Params) {
       throw new Error("APPROVAL_FAILED");
     }
 
+    await delCache([
+      cacheKeys.userSummary(result.userId),
+      cacheKeys.adminUsersList,
+    ]);
+
     return NextResponse.json({
       ok: true,
       message: "Deposit approved successfully",
-      data: result,
+      data: {
+        depositId: result.depositId,
+        creditedAmount: result.creditedAmount,
+        referralRewardAmount: result.referralRewardAmount,
+        referralRewarded: result.referralRewarded,
+      },
     });
   } catch (error) {
     if (error instanceof Error && error.message === "DEPOSIT_NOT_FOUND") {

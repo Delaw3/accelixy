@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
@@ -22,6 +22,13 @@ const registerSchema = z
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Confirm password is required"),
     referralCode: z.string().trim().max(32, "Referral code is too long").optional().or(z.literal("")),
+    website: z.string().optional(),
+    agreeToTerms: z.boolean().refine((value) => value, {
+      message: "You must agree to the Terms and Conditions.",
+    }),
+    humanCheck: z.boolean().refine((value) => value, {
+      message: "Please confirm you are human before signing up.",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -36,6 +43,8 @@ export default function RegisterPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
 
@@ -56,6 +65,9 @@ export default function RegisterPage() {
       password: "",
       confirmPassword: "",
       referralCode: "",
+      website: "",
+      agreeToTerms: false,
+      humanCheck: false,
     },
   });
   const usernameRegister = register("username");
@@ -168,13 +180,31 @@ export default function RegisterPage() {
       ) : null}
 
       <section className="w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-sm md:p-8">
+        <Link
+          href="/"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted transition hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
         <div className="mb-5 flex justify-center">
           <Logo width={132} height={38} />
         </div>
-        <h1 className="text-2xl font-semibold">Register</h1>
-        <p className="mt-1 text-sm text-muted">Create your Accelixy account.</p>
+        <h1 className="text-center text-2xl font-semibold">Register</h1>
+        <p className="mt-1 text-center text-sm text-muted">Create your Accelixy account.</p>
 
         <form className="mt-6 grid gap-4 md:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>
+          <div className="sr-only" aria-hidden="true">
+            <label htmlFor="website">Website</label>
+            <input
+              id="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              {...register("website")}
+            />
+          </div>
+
           <FormField label="First Name" error={errors.firstname?.message}>
             <input
               type="text"
@@ -230,19 +260,41 @@ export default function RegisterPage() {
           </FormField>
 
           <FormField label="Password" error={errors.password?.message}>
-            <input
-              type="password"
-              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              {...register("password")}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 pr-11 text-sm text-foreground outline-none focus:border-primary"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </FormField>
 
           <FormField label="Confirm Password" error={errors.confirmPassword?.message}>
-            <input
-              type="password"
-              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-              {...register("confirmPassword")}
-            />
+            <div className="relative mt-1">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 pr-11 text-sm text-foreground outline-none focus:border-primary"
+                {...register("confirmPassword")}
+              />
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-pressed={showConfirmPassword}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </FormField>
 
           <div className="md:col-span-2">
@@ -257,6 +309,36 @@ export default function RegisterPage() {
           </div>
 
           <div className="md:col-span-2">
+            <label className="mb-3 flex items-start gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border bg-background accent-primary"
+                {...register("agreeToTerms")}
+              />
+              <span>
+                I agree to the{" "}
+                <Link href="/terms" className="font-semibold text-primary hover:underline">
+                  Terms and Conditions
+                </Link>
+                .
+              </span>
+            </label>
+            {errors.agreeToTerms ? (
+              <p className="mb-3 text-sm text-red-400">{errors.agreeToTerms.message}</p>
+            ) : null}
+
+            <label className="mb-3 flex items-start gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border bg-background accent-primary"
+                {...register("humanCheck")}
+              />
+              <span>I&apos;m human and this is a genuine signup request.</span>
+            </label>
+            {errors.humanCheck ? (
+              <p className="mb-3 text-sm text-red-400">{errors.humanCheck.message}</p>
+            ) : null}
+
             {submitError ? <p className="mb-3 text-sm text-red-400">{submitError}</p> : null}
             <Button
               type="submit"

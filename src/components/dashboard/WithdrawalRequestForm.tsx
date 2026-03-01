@@ -46,7 +46,7 @@ export function WithdrawalRequestForm({ wallets }: WithdrawalRequestFormProps) {
     }
 
     if (!selectedWallet || !selectedAddress) {
-      setSubmitError("Select an available wallet.");
+      setSubmitError("No wallet found. Go to your profile and add at least one wallet address.");
       return;
     }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
@@ -31,17 +31,46 @@ function formatDate(value: string | undefined) {
 }
 
 export function DepositHistoryTable({ items, pageSize = 10 }: DepositHistoryTableProps) {
-  const [records, setRecords] = useState(items);
-  const [page, setPage] = useState(1);
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [visibleCount, setVisibleCount] = useState(pageSize);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+  const records = useMemo(() => {
+    if (deletedIds.length === 0) {
+      return items;
+    }
+    const deletedSet = new Set(deletedIds);
+    return items.filter((item) => !deletedSet.has(item.id));
+  }, [deletedIds, items]);
 
-  const pagedRecords = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return records.slice(start, start + pageSize);
-  }, [page, pageSize, records]);
+  const visibleRecords = useMemo(
+    () => records.slice(0, visibleCount),
+    [records, visibleCount],
+  );
+  const hasMore = visibleCount < records.length;
+
+  useEffect(() => {
+    if (!hasMore || !loadMoreRef.current) {
+      return;
+    }
+
+    const target = loadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) {
+          return;
+        }
+        setVisibleCount((prev) => Math.min(records.length, prev + pageSize));
+      },
+      { rootMargin: "160px 0px" },
+    );
+
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [hasMore, pageSize, records.length]);
 
   const deleteDeposit = async (id: string) => {
     setDeletingId(id);
@@ -51,14 +80,7 @@ export function DepositHistoryTable({ items, pageSize = 10 }: DepositHistoryTabl
         return;
       }
 
-      setRecords((prev) => {
-        const next = prev.filter((item) => item.id !== id);
-        const nextTotalPages = Math.max(1, Math.ceil(next.length / pageSize));
-        if (page > nextTotalPages) {
-          setPage(nextTotalPages);
-        }
-        return next;
-      });
+      setDeletedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     } finally {
       setDeletingId(null);
     }
@@ -71,7 +93,7 @@ export function DepositHistoryTable({ items, pageSize = 10 }: DepositHistoryTabl
   return (
     <div className="mt-4 space-y-4">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] text-left text-sm">
+        <table className="w-full min-w-175 text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="px-3 py-2">Method</th>
@@ -83,7 +105,7 @@ export function DepositHistoryTable({ items, pageSize = 10 }: DepositHistoryTabl
             </tr>
           </thead>
           <tbody>
-            {pagedRecords.map((item) => (
+            {visibleRecords.map((item) => (
               <tr key={item.id} className="border-b border-border/60">
                 <td className="px-3 py-2">{item.method}</td>
                 <td className="px-3 py-2">${item.amountUsd.toFixed(2)}</td>
@@ -118,26 +140,18 @@ export function DepositHistoryTable({ items, pageSize = 10 }: DepositHistoryTabl
         </table>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page <= 1}
-          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-        >
-          Previous
-        </Button>
+      <div className="space-y-2">
         <p className="text-sm text-muted">
-          Page {page} of {totalPages}
+          Showing {visibleRecords.length} of {records.length} deposits
         </p>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page >= totalPages}
-          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-        >
-          Next
-        </Button>
+        {hasMore ? (
+          <div
+            ref={loadMoreRef}
+            className="rounded-md border border-dashed border-border/70 bg-background px-3 py-2 text-center text-sm text-muted"
+          >
+            Scroll to load more...
+          </div>
+        ) : null}
       </div>
 
       {confirmDeleteId ? (

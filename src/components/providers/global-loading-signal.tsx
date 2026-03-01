@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const FALLBACK_HIDE_MS = 2200;
@@ -7,6 +9,8 @@ const FALLBACK_HIDE_MS = 2200;
 export function GlobalLoadingSignal() {
   const [isLoading, setIsLoading] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     const showLoader = () => {
@@ -68,7 +72,21 @@ export function GlobalLoadingSignal() {
         <div className="h-full w-full origin-left animate-[loadingBar_1.2s_ease-in-out_infinite] bg-gradient-to-r from-primaryGradientStart via-primary to-primaryGradientEnd" />
       </div>
       <div className="pointer-events-none fixed inset-0 z-[119] flex items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary bg-card/75 shadow-lg backdrop-blur-sm" />
+        {isHomePage ? (
+          <div className="relative flex items-center justify-center">
+            <div className="absolute h-28 w-28 animate-pulse rounded-full bg-primary/15 blur-xl" />
+            <Image
+              src="/brand/Logo.png"
+              alt="Accelixy"
+              width={220}
+              height={66}
+              priority
+              className="h-auto w-[170px] animate-[logoFloat_1.2s_ease-in-out_infinite]"
+            />
+          </div>
+        ) : (
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-border border-t-primary bg-card/75 shadow-lg backdrop-blur-sm" />
+        )}
       </div>
     </>
   );

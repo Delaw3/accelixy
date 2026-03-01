@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 
 type InvestmentHistoryItem = {
@@ -45,13 +44,35 @@ export function InvestmentHistoryTable({
   items,
   pageSize = 10,
 }: InvestmentHistoryTableProps) {
-  const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const [visibleCount, setVisibleCount] = useState(pageSize);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const pagedItems = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return items.slice(start, start + pageSize);
-  }, [items, page, pageSize]);
+  const visibleItems = useMemo(
+    () => items.slice(0, visibleCount),
+    [items, visibleCount],
+  );
+  const hasMore = visibleCount < items.length;
+
+  useEffect(() => {
+    if (!hasMore || !loadMoreRef.current) {
+      return;
+    }
+
+    const target = loadMoreRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) {
+          return;
+        }
+        setVisibleCount((prev) => Math.min(items.length, prev + pageSize));
+      },
+      { rootMargin: "160px 0px" },
+    );
+
+    observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [hasMore, items.length, pageSize]);
 
   if (items.length === 0) {
     return (
@@ -64,7 +85,7 @@ export function InvestmentHistoryTable({
   return (
     <div className="mt-4 space-y-4">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-225 text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted">
               <th className="px-3 py-2">Plan</th>
@@ -78,7 +99,7 @@ export function InvestmentHistoryTable({
             </tr>
           </thead>
           <tbody>
-            {pagedItems.map((item) => (
+            {visibleItems.map((item) => (
               <tr key={item.id} className="border-b border-border/60">
                 <td className="px-3 py-2 font-medium">{item.planName}</td>
                 <td className="px-3 py-2">{formatMoney(item.amount)}</td>
@@ -96,26 +117,18 @@ export function InvestmentHistoryTable({
         </table>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page <= 1}
-          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-        >
-          Previous
-        </Button>
+      <div className="space-y-2">
         <p className="text-sm text-muted">
-          Page {page} of {totalPages}
+          Showing {visibleItems.length} of {items.length} investments
         </p>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={page >= totalPages}
-          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-        >
-          Next
-        </Button>
+        {hasMore ? (
+          <div
+            ref={loadMoreRef}
+            className="rounded-md border border-dashed border-border/70 bg-background px-3 py-2 text-center text-sm text-muted"
+          >
+            Scroll to load more...
+          </div>
+        ) : null}
       </div>
     </div>
   );

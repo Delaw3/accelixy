@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Attachment } from "nodemailer/lib/mailer";
 import { requireAdminUser } from "@/lib/auth/guards";
 import { connectDB } from "@/lib/db/mongoose";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/lib/mail/admin-templates";
 import { sendMail } from "@/lib/mail/mailer";
 import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 const payloadSchema = z.object({
   userId: z.string().trim().optional(),
@@ -52,14 +54,14 @@ export async function POST(request: Request) {
     }
 
     targetEmail = targetUser.email;
-    targetName = targetUser.firstname ?? targetName;
+    targetName = capitalizeFirstLetter(targetUser.firstname ?? targetName);
   }
 
   if (!targetEmail) {
     return NextResponse.json({ ok: false, message: "Provide userId or email." }, { status: 400 });
   }
 
-  let composed: { subject: string; html: string; text: string };
+  let composed: { subject: string; html: string; text: string; attachments?: Attachment[] };
 
   if (templateKey === "investmentPaid") {
     composed = investmentPaidTemplate({
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
     subject: composed.subject || subject,
     html: composed.html,
     text: composed.text,
+    attachments: composed.attachments,
   });
 
   return NextResponse.json({ ok: true, message: "Mail sent successfully." });

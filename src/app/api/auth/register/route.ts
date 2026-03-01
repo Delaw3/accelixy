@@ -1,20 +1,56 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
 import { handleApiError } from "@/lib/http/api-error";
+import {
+  signupAdminAlertTemplate,
+  welcomeTemplate,
+} from "@/lib/mail/admin-templates";
+import { getAdminNotificationEmail, sendMailSafely } from "@/lib/mail/notify";
 import Referral from "@/lib/models/referral.model";
 import User from "@/lib/models/user.model";
 import UserStats from "@/lib/models/user-stats.model";
 import UserWallet from "@/lib/models/user-wallet.model";
 import UserWalletAddress from "@/lib/models/user-wallet-address.model";
 import { generateReferralCode } from "@/lib/referrals/referral-code";
+import { capitalizeFirstLetter } from "@/lib/utils";
 import { registerSchema } from "@/lib/validators/auth";
 
 export async function POST(request: Request) {
   try {
     await connectDB();
 
-    const body = await request.json();
+    const body = (await request.json()) as {
+      humanCheck?: unknown;
+      agreeToTerms?: unknown;
+      website?: unknown;
+      [key: string]: unknown;
+    };
+
+    if (body.agreeToTerms !== true) {
+      return NextResponse.json(
+        { ok: false, message: "You must agree to the Terms and Conditions." },
+        { status: 400 }
+      );
+    }
+
+    if (body.humanCheck !== true) {
+      return NextResponse.json(
+        { ok: false, message: "Please confirm the human verification check." },
+        { status: 400 }
+      );
+    }
+
+    const honeypot = typeof body.website === "string" ? body.website.trim() : "";
+    if (honeypot.length > 0) {
+      return NextResponse.json(
+        { ok: false, message: "Unable to verify signup request." },
+        { status: 400 }
+      );
+    }
+
     const payload = registerSchema.parse(body);
     const { confirmPassword: _confirmPassword, ...parsedUserData } = payload;
     void _confirmPassword;
@@ -98,6 +134,44 @@ export async function POST(request: Request) {
       });
     }
 
+    const displayName = `${capitalizeFirstLetter(user.firstname)} ${capitalizeFirstLetter(user.lastname)}`.trim();
+    const userWelcome = welcomeTemplate({
+      name: displayName || user.username,
+    });
+    await sendMailSafely(
+      {
+        to: user.email,
+        subject: userWelcome.subject,
+        html: userWelcome.html,
+        text: userWelcome.text,
+        attachments: userWelcome.attachments,
+      },
+      "welcome email",
+    );
+
+    const adminEmail = getAdminNotificationEmail();
+    if (adminEmail) {
+      const adminAlert = signupAdminAlertTemplate({
+        name: displayName || user.username,
+        username: user.username,
+        email: user.email,
+        country: user.country,
+        phone: user.phone,
+      });
+      await sendMailSafely(
+        {
+          to: adminEmail,
+          subject: adminAlert.subject,
+          html: adminAlert.html,
+          text: adminAlert.text,
+          attachments: adminAlert.attachments,
+        },
+        "admin signup alert",
+      );
+    }
+
+    await delCache(cacheKeys.adminUsersList);
+
     return NextResponse.json(
       {
         ok: true,
@@ -105,8 +179,8 @@ export async function POST(request: Request) {
         data: {
           user: {
             id: user._id.toString(),
-            firstname: user.firstname,
-            lastname: user.lastname,
+            firstname: capitalizeFirstLetter(user.firstname),
+            lastname: capitalizeFirstLetter(user.lastname),
             username: user.username,
             email: user.email,
             country: user.country,

@@ -18,6 +18,7 @@ type SidebarNavProps = {
   showLogo?: boolean;
   className?: string;
   onNavigate?: () => void;
+  bannerSrc?: string;
 };
 
 export function SidebarNav({
@@ -25,6 +26,7 @@ export function SidebarNav({
   showLogo = true,
   className,
   onNavigate,
+  bannerSrc = "https://lagpvwdlpjmuuxzukczh.supabase.co/storage/v1/object/public/Accelixy-Bucket/pictures/admin.png",
 }: SidebarNavProps) {
   const pathname = usePathname();
   const activeHref =
@@ -73,9 +75,9 @@ export function SidebarNav({
       </nav>
 
       <div className="mt-3 md:mt-auto md:pt-3">
-        <div className="mx-auto w-full max-w-[120px] overflow-hidden sm:max-w-[170px]">
+        <div className="mx-auto w-full max-w-30 overflow-hidden sm:max-w-42.5">
           <Image
-            src="https://lagpvwdlpjmuuxzukczh.supabase.co/storage/v1/object/public/Accelixy-Bucket/pictures/navbar.png"
+            src={bannerSrc}
             alt="Dashboard sidebar banner"
             width={320}
             height={200}

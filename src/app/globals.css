@@ -86,6 +86,26 @@
   .translator-shell .VIpgJd-ZVi9od-l4eHX-hSRGPd {
     display: none !important;
   }
+
+  .loader-bubble {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: hsl(var(--primary));
+    animation: loaderBubbleMove 1s ease-in-out infinite;
+  }
+
+  .loader-bubble-1 {
+    animation-delay: 0s;
+  }
+
+  .loader-bubble-2 {
+    animation-delay: 0.15s;
+  }
+
+  .loader-bubble-3 {
+    animation-delay: 0.3s;
+  }
 }
 
 @keyframes loadingBar {
@@ -100,5 +120,64 @@
   100% {
     transform: scaleX(1);
     opacity: 0.8;
+  }
+}
+
+@keyframes logoFloat {
+  0% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+}
+
+@keyframes logoDance {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  20% {
+    transform: translateY(-3px) rotate(-3deg) scale(1.02);
+  }
+  40% {
+    transform: translateY(0) rotate(3deg) scale(1);
+  }
+  60% {
+    transform: translateY(-2px) rotate(-2deg) scale(1.015);
+  }
+  80% {
+    transform: translateY(0) rotate(2deg) scale(1);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes loaderBubbleMove {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
+  }
+  25% {
+    transform: translate(-3px, -5px) scale(1.15);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(2px, 0) scale(1);
+    opacity: 0.75;
+  }
+  75% {
+    transform: translate(4px, -4px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.5;
   }
 }

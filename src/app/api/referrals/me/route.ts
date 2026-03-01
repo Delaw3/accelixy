@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { connectDB } from "@/lib/db/mongoose";
 import Referral from "@/lib/models/referral.model";
 import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 export async function GET() {
   const session = await auth();
@@ -56,8 +57,8 @@ export async function GET() {
       referralCode: currentUser?.referralCode ?? "",
       referredUsers: referredUsers.map((user) => ({
         id: user._id.toString(),
-        firstname: user.firstname,
-        lastname: user.lastname,
+        firstname: capitalizeFirstLetter(user.firstname),
+        lastname: capitalizeFirstLetter(user.lastname),
         email: user.email,
         referralRewardPaid: Boolean(user.referralRewardPaid),
         referralBonusPaid: rewardByReferredUserId.get(user._id.toString())?.rewardAmount ?? 0,

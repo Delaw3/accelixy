@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { connectDB } from "@/lib/db/mongoose";
 import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 const profilePayloadSchema = z.object({
   firstname: z.string().trim().min(1, "First name is required"),
@@ -48,8 +49,8 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     data: {
-      firstname: user.firstname,
-      lastname: user.lastname,
+      firstname: capitalizeFirstLetter(user.firstname),
+      lastname: capitalizeFirstLetter(user.lastname),
       username: user.username,
       email: user.email,
       country: user.country,
@@ -131,6 +132,10 @@ export async function PATCH(request: Request) {
   return NextResponse.json({
     ok: true,
     message: "Profile updated successfully",
-    data: updated,
+    data: {
+      ...updated,
+      firstname: capitalizeFirstLetter(updated.firstname),
+      lastname: capitalizeFirstLetter(updated.lastname),
+    },
   });
 }

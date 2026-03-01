@@ -18,6 +18,7 @@ import { SidebarNav, type SidebarNavItem } from "@/components/dashboard/SidebarN
 
 type DashboardShellProps = {
   username: string;
+  role: "USER" | "ADMIN";
   children: React.ReactNode;
 };
 
@@ -32,20 +33,23 @@ const sidebarItems: SidebarNavItem[] = [
   { label: "Refer a Friend", href: "/dashboard/refer", icon: UserPlus },
 ];
 
-export function DashboardShell({ username, children }: DashboardShellProps) {
+const userSidebarBannerSrc =
+  "https://lagpvwdlpjmuuxzukczh.supabase.co/storage/v1/object/public/Accelixy-Bucket/pictures/navbar.png";
+
+export function DashboardShell({ username, role, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:block">
-        <SidebarNav items={sidebarItems} />
+        <SidebarNav items={sidebarItems} bannerSrc={userSidebarBannerSrc} />
       </div>
 
       <div className="md:pl-72">
         <div className="flex justify-center border-b border-border bg-background/90 px-4 py-3 md:hidden">
           <Logo width={124} height={36} />
         </div>
-        <DashboardTopbar username={username} onMenuClick={() => setMobileOpen(true)} />
+        <DashboardTopbar username={username} role={role} onMenuClick={() => setMobileOpen(true)} />
         <main className="px-4 py-6 md:px-6">{children}</main>
       </div>
 
@@ -70,6 +74,7 @@ export function DashboardShell({ username, children }: DashboardShellProps) {
             </div>
             <SidebarNav
               items={sidebarItems}
+              bannerSrc={userSidebarBannerSrc}
               showLogo={false}
               className="h-[calc(100%-3.5rem)] border-r"
               onNavigate={() => setMobileOpen(false)}

@@ -18,28 +18,28 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const page = parsePositiveInt(searchParams.get("page"), 1);
+  const requestedPage = parsePositiveInt(searchParams.get("page"), 1);
   const limit = Math.min(parsePositiveInt(searchParams.get("limit"), 10), 50);
-  const skip = (page - 1) * limit;
 
   await connectDB();
 
-  const [items, totalItems] = await Promise.all([
-    TransactionNotification.find({ userId: session.user.id })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean<{
-        _id: { toString: () => string };
-        type: "deposit" | "withdrawal" | "investment";
-        message: string;
-        amount: number;
-        createdAt?: Date;
-      }[]>(),
-    TransactionNotification.countDocuments({ userId: session.user.id }),
-  ]);
+  const totalItems = await TransactionNotification.countDocuments({ userId: session.user.id });
 
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const page = Math.min(requestedPage, totalPages);
+  const skip = (page - 1) * limit;
+
+  const items = await TransactionNotification.find({ userId: session.user.id })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean<{
+      _id: { toString: () => string };
+      type: "deposit" | "withdrawal" | "investment";
+      message: string;
+      amount: number;
+      createdAt?: Date;
+    }[]>();
 
   return NextResponse.json({
     ok: true,

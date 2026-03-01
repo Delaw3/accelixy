@@ -1,10 +1,16 @@
 import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { requireAdminUser } from "@/lib/auth/guards";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
+import { investmentPaidTemplate } from "@/lib/mail/admin-templates";
+import { formatUsd, sendMailSafely } from "@/lib/mail/notify";
 import Investment from "@/lib/models/investment.model";
 import TransactionNotification from "@/lib/models/transaction-notification.model";
+import User from "@/lib/models/user.model";
 import UserWallet from "@/lib/models/user-wallet.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -32,6 +38,15 @@ export async function POST(_request: Request, { params }: Params) {
           status: "PAID";
         }
       | null = null;
+    let payoutMailPayload:
+      | {
+          to: string;
+          name: string;
+          amount: string;
+          plan: string;
+        }
+      | null = null;
+    let affectedUserId: string | null = null;
 
     await dbSession.withTransaction(async () => {
       const investment = await Investment.findOneAndUpdate(
@@ -78,15 +93,60 @@ export async function POST(_request: Request, { params }: Params) {
         { session: dbSession },
       );
 
+      const user = await User.findById(investment.userId)
+        .select("firstname lastname username email")
+        .session(dbSession)
+        .lean<{ firstname?: string; lastname?: string; username?: string; email?: string } | null>();
+
+      if (user?.email) {
+        const displayName =
+          `${capitalizeFirstLetter(user.firstname)} ${capitalizeFirstLetter(user.lastname)}`.trim() ||
+          user.username ||
+          "Investor";
+        payoutMailPayload = {
+          to: user.email,
+          name: displayName,
+          amount: formatUsd(payoutAmount),
+          plan: investment.planName,
+        };
+      }
+
       result = {
         id: investment._id.toString(),
         payoutAmount,
         status: "PAID",
       };
+      affectedUserId = investment.userId.toString();
     });
 
     if (!result) {
       throw new Error("PAYMENT_FAILED");
+    }
+
+    if (payoutMailPayload) {
+      const payoutMail = investmentPaidTemplate({
+        name: payoutMailPayload.name,
+        amount: payoutMailPayload.amount,
+        plan: payoutMailPayload.plan,
+      });
+      await sendMailSafely(
+        {
+          to: payoutMailPayload.to,
+          subject: payoutMail.subject,
+          html: payoutMail.html,
+          text: payoutMail.text,
+          attachments: payoutMail.attachments,
+        },
+        "investment payout user notice",
+      );
+    }
+
+    if (affectedUserId) {
+      await delCache([
+        cacheKeys.adminInvestmentsList,
+        cacheKeys.adminUsersList,
+        cacheKeys.userSummary(affectedUserId),
+      ]);
     }
 
     return NextResponse.json({

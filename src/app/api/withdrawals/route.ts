@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+import { requireActiveUser } from "@/lib/auth/guards";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
+import {
+  withdrawalRequestAdminTemplate,
+  withdrawalRequestUserTemplate,
+} from "@/lib/mail/admin-templates";
+import { formatUsd, getAdminNotificationEmail, sendMailSafely } from "@/lib/mail/notify";
 import TransactionNotification from "@/lib/models/transaction-notification.model";
+import User from "@/lib/models/user.model";
 import UserWalletAddress from "@/lib/models/user-wallet-address.model";
 import UserWallet from "@/lib/models/user-wallet.model";
 import Withdrawal from "@/lib/models/withdrawal.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 const createWithdrawalSchema = z.object({
   amountUsd: z.number().positive(),
@@ -13,10 +22,11 @@ const createWithdrawalSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  const active = await requireActiveUser();
+  if (!active.ok) {
+    return NextResponse.json({ ok: false, message: active.message }, { status: active.status });
   }
+  const session = active.session;
 
   const body = await request.json();
   const parsed = createWithdrawalSchema.safeParse(body);
@@ -55,7 +65,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: "Selected wallet is not available. Add wallet first.",
+        message: "No wallet found. Go to your profile and add at least one wallet address.",
       },
       { status: 400 }
     );
@@ -82,6 +92,62 @@ export async function POST(request: Request) {
     amount: amountUsd,
     status: "PENDING",
   });
+
+  const currentUser = await User.findById(session.user.id)
+    .select("firstname lastname username email")
+    .lean<{ firstname?: string; lastname?: string; username?: string; email?: string } | null>();
+
+  if (currentUser?.email) {
+    const name =
+      `${capitalizeFirstLetter(currentUser.firstname)} ${capitalizeFirstLetter(currentUser.lastname)}`.trim() ||
+      currentUser.username ||
+      "Investor";
+    const amount = formatUsd(amountUsd);
+    const method = methodLabelMap[parsed.data.walletType];
+
+    const userMail = withdrawalRequestUserTemplate({
+      name,
+      amount,
+      method,
+      walletAddress,
+    });
+    await sendMailSafely(
+      {
+        to: currentUser.email,
+        subject: userMail.subject,
+        html: userMail.html,
+        text: userMail.text,
+        attachments: userMail.attachments,
+      },
+      "withdrawal request user notice",
+    );
+
+    const adminEmail = getAdminNotificationEmail();
+    if (adminEmail) {
+      const adminMail = withdrawalRequestAdminTemplate({
+        name,
+        email: currentUser.email,
+        amount,
+        method,
+        walletAddress,
+      });
+      await sendMailSafely(
+        {
+          to: adminEmail,
+          subject: adminMail.subject,
+          html: adminMail.html,
+          text: adminMail.text,
+          attachments: adminMail.attachments,
+        },
+        "withdrawal request admin notice",
+      );
+    }
+  }
+
+  await delCache([
+    cacheKeys.adminWithdrawalsList,
+    cacheKeys.adminUsersList,
+  ]);
 
   return NextResponse.json(
     {

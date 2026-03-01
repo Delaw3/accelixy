@@ -113,7 +113,11 @@ export function AdminInvestmentsManager() {
                     <td className="px-3 py-2">${item.expectedReturn.toFixed(2)}</td>
                     <td className="px-3 py-2">{new Date(item.startedAt).toLocaleString()}</td>
                     <td className="px-3 py-2">{new Date(item.endsAt).toLocaleString()}</td>
-                    <td className="px-3 py-2">{item.status}</td>
+                    <td className="px-3 py-2">
+                      <span className={item.status === "ACTIVE" ? "text-primary" : undefined}>
+                        {item.status}
+                      </span>
+                    </td>
                     <td className="px-3 py-2">
                       <Button
                         variant={canPay(item) ? "gradient" : "ghost"}

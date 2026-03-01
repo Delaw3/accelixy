@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CheckCircle2,
   ChevronDown,
+  Eye,
+  EyeOff,
   House,
   KeyRound,
   LogOut,
@@ -21,6 +23,7 @@ import { Button } from "@/components/ui/button";
 
 type DashboardTopbarProps = {
   username: string;
+  role: "USER" | "ADMIN";
   onMenuClick: () => void;
 };
 
@@ -76,7 +79,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 type WalletFormValues = z.infer<typeof walletSchema>;
 
-export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps) {
+export function DashboardTopbar({ username, role, onMenuClick }: DashboardTopbarProps) {
   const { update } = useSession();
   const [displayUsername, setDisplayUsername] = useState(username);
   const [profileData, setProfileData] = useState<ProfilePayload | null>(null);
@@ -93,14 +96,42 @@ export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps)
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    oldPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
   const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const usernameAbortRef = useRef<AbortController | null>(null);
 
   const initial = displayUsername?.trim().charAt(0).toUpperCase() || "U";
+  const roleLabel = role.toLowerCase();
+  const displayName = displayUsername?.trim() || "user";
 
   useEffect(() => {
     setDisplayUsername(username);
   }, [username]);
+
+  useEffect(() => {
+    const loadTopbarUsername = async () => {
+      try {
+        const response = await fetch("/api/user/profile");
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: { username?: string };
+        };
+
+        const nextUsername = payload.data?.username?.trim();
+        if (response.ok && payload.ok && nextUsername) {
+          setDisplayUsername(nextUsername);
+        }
+      } catch {
+        // Keep existing username shown in header when profile fetch fails.
+      }
+    };
+
+    void loadTopbarUsername();
+  }, []);
 
   const {
     register: registerProfile,
@@ -275,6 +306,11 @@ export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps)
   const openPasswordModal = () => {
     setIsProfileMenuOpen(false);
     setPasswordError(null);
+    setPasswordVisibility({
+      oldPassword: false,
+      newPassword: false,
+      confirmPassword: false,
+    });
     resetPassword({
       oldPassword: "",
       newPassword: "",
@@ -453,8 +489,8 @@ export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps)
                   {initial}
                 </div>
                 <div className="hidden text-left sm:block">
-                  <p className="text-sm font-semibold leading-tight">{displayUsername}</p>
-                  <p className="text-[11px] uppercase leading-tight text-muted">User</p>
+                  <p className="text-sm font-semibold leading-tight">{displayName}</p>
+                  <p className="text-[11px] leading-tight text-muted">{roleLabel}</p>
                 </div>
                 <ChevronDown className="hidden h-4 w-4 text-muted sm:block" />
               </button>
@@ -466,8 +502,8 @@ export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps)
                       {initial}
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-semibold leading-tight">{displayUsername}</p>
-                      <p className="text-[11px] uppercase leading-tight text-muted">User</p>
+                      <p className="text-sm font-semibold leading-tight">{displayName}</p>
+                      <p className="text-[11px] leading-tight text-muted">{roleLabel}</p>
                     </div>
                   </div>
                   <button
@@ -629,25 +665,85 @@ export function DashboardTopbar({ username, onMenuClick }: DashboardTopbarProps)
               onSubmit={handlePasswordSubmit(onSubmitPassword)}
             >
               <Field label="Old Password" error={passwordFormErrors.oldPassword?.message}>
-                <input
-                  type="password"
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  {...registerPassword("oldPassword")}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={passwordVisibility.oldPassword ? "text" : "password"}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-11 text-sm outline-none focus:border-primary"
+                    {...registerPassword("oldPassword")}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    onClick={() =>
+                      setPasswordVisibility((prev) => ({
+                        ...prev,
+                        oldPassword: !prev.oldPassword,
+                      }))
+                    }
+                    aria-label={passwordVisibility.oldPassword ? "Hide password" : "Show password"}
+                    aria-pressed={passwordVisibility.oldPassword}
+                  >
+                    {passwordVisibility.oldPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </Field>
               <Field label="New Password" error={passwordFormErrors.newPassword?.message}>
-                <input
-                  type="password"
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  {...registerPassword("newPassword")}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={passwordVisibility.newPassword ? "text" : "password"}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-11 text-sm outline-none focus:border-primary"
+                    {...registerPassword("newPassword")}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    onClick={() =>
+                      setPasswordVisibility((prev) => ({
+                        ...prev,
+                        newPassword: !prev.newPassword,
+                      }))
+                    }
+                    aria-label={passwordVisibility.newPassword ? "Hide password" : "Show password"}
+                    aria-pressed={passwordVisibility.newPassword}
+                  >
+                    {passwordVisibility.newPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </Field>
               <Field label="Confirm Password" error={passwordFormErrors.confirmPassword?.message}>
-                <input
-                  type="password"
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  {...registerPassword("confirmPassword")}
-                />
+                <div className="relative mt-1">
+                  <input
+                    type={passwordVisibility.confirmPassword ? "text" : "password"}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 pr-11 text-sm outline-none focus:border-primary"
+                    {...registerPassword("confirmPassword")}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/80 text-muted transition hover:border-primary/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    onClick={() =>
+                      setPasswordVisibility((prev) => ({
+                        ...prev,
+                        confirmPassword: !prev.confirmPassword,
+                      }))
+                    }
+                    aria-label={passwordVisibility.confirmPassword ? "Hide password" : "Show password"}
+                    aria-pressed={passwordVisibility.confirmPassword}
+                  >
+                    {passwordVisibility.confirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </Field>
 
               {passwordError ? <p className="text-sm text-red-400">{passwordError}</p> : null}

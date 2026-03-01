@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { connectDB } from "@/lib/db/mongoose";
 import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 type SafeAuthUser = {
   id: string;
@@ -19,6 +21,10 @@ type SafeAuthUser = {
 function normalizeRole(role: unknown): "USER" | "ADMIN" {
   const value = String(role ?? "").trim().toUpperCase();
   return value === "ADMIN" ? "ADMIN" : "USER";
+}
+
+class AccountDeactivatedError extends CredentialsSignin {
+  code = "account_deactivated";
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -52,8 +58,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           $or: [{ email: identifier }, { username: identifier }],
         }).select("+password role isActive");
 
-        if (!user?.password || user.isActive === false) {
+        if (!user?.password) {
           return null;
+        }
+
+        if (user.isActive === false) {
+          throw new AccountDeactivatedError();
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -64,8 +74,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const safeUser: SafeAuthUser = {
           id: user._id.toString(),
-          firstname: user.firstname,
-          lastname: user.lastname,
+          firstname: capitalizeFirstLetter(user.firstname),
+          lastname: capitalizeFirstLetter(user.lastname),
           username: user.username,
           email: user.email,
           emailVerified: null,

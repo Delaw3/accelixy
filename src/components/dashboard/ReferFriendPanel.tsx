@@ -92,7 +92,7 @@ export function ReferFriendPanel() {
 
         {!loading && !error && referredUsers.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
+            <table className="w-full min-w-170 text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-muted">
                   <th className="px-3 py-2">Name</th>

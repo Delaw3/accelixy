@@ -1,26 +1,27 @@
-import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { LiveActivityToasts } from "@/components/landing/LiveActivityToasts";
-import { normalizeRole } from "@/lib/auth/guards";
+import { normalizeRole, requireActiveUser } from "@/lib/auth/guards";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const session = await auth();
-  if (!session?.user) {
+  const active = await requireActiveUser();
+  if (!active.ok) {
     redirect("/login");
   }
+  const session = active.session;
 
   if (normalizeRole(session.user.role) === "ADMIN") {
     redirect("/admin");
   }
 
   const username = session.user.username;
+  const role = normalizeRole(session.user.role);
 
   return (
     <>
-      <DashboardShell username={username}>{children}</DashboardShell>
+      <DashboardShell username={username} role={role}>{children}</DashboardShell>
       <LiveActivityToasts />
     </>
   );

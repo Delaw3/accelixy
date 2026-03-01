@@ -2,13 +2,18 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
-import {
-  getDepositMethodConfig,
-  type DepositMethod,
-} from "@/lib/deposit/payment-methods";
+import { getDepositMethodConfig, type DepositMethod } from "@/lib/deposit/payment-methods";
+import { requireActiveUser } from "@/lib/auth/guards";
 import { connectDB } from "@/lib/db/mongoose";
+import {
+  depositRequestAdminTemplate,
+  depositRequestUserTemplate,
+} from "@/lib/mail/admin-templates";
+import { formatUsd, getAdminNotificationEmail, sendMailSafely } from "@/lib/mail/notify";
 import DepositHistory from "@/lib/models/deposit-history.model";
 import TransactionNotification from "@/lib/models/transaction-notification.model";
+import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 const createDepositSchema = z.object({
   method: z.enum(["USDT_BEP20", "USDT_TRC20", "BTC"]),
@@ -16,11 +21,11 @@ const createDepositSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  const active = await requireActiveUser();
+  if (!active.ok) {
+    return NextResponse.json({ ok: false, message: active.message }, { status: active.status });
   }
+  const session = active.session;
 
   const body = await request.json();
   const parsed = createDepositSchema.safeParse(body);
@@ -59,6 +64,56 @@ export async function POST(request: Request) {
     amount: parsed.data.amountUsd,
     status: "PENDING",
   });
+
+  const currentUser = await User.findById(session.user.id)
+    .select("firstname lastname username email")
+    .lean<{ firstname?: string; lastname?: string; username?: string; email?: string } | null>();
+
+  if (currentUser?.email) {
+    const name =
+      `${capitalizeFirstLetter(currentUser.firstname)} ${capitalizeFirstLetter(currentUser.lastname)}`.trim() ||
+      currentUser.username ||
+      "Investor";
+    const amount = formatUsd(parsed.data.amountUsd);
+
+    const userMail = depositRequestUserTemplate({
+      name,
+      amount,
+      method: methodConfig.label,
+      reference,
+    });
+    await sendMailSafely(
+      {
+        to: currentUser.email,
+        subject: userMail.subject,
+        html: userMail.html,
+        text: userMail.text,
+        attachments: userMail.attachments,
+      },
+      "deposit request user notice",
+    );
+
+    const adminEmail = getAdminNotificationEmail();
+    if (adminEmail) {
+      const adminMail = depositRequestAdminTemplate({
+        name,
+        email: currentUser.email,
+        amount,
+        method: methodConfig.label,
+        reference,
+      });
+      await sendMailSafely(
+        {
+          to: adminEmail,
+          subject: adminMail.subject,
+          html: adminMail.html,
+          text: adminMail.text,
+          attachments: adminMail.attachments,
+        },
+        "deposit request admin notice",
+      );
+    }
+  }
 
   return NextResponse.json(
     {

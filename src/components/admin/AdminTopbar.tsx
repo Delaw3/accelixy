@@ -3,7 +3,6 @@
 import { LogOut, Menu } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
-import { SiteTranslator } from "@/components/layout/SiteTranslator";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { Button } from "@/components/ui/button";
 
@@ -38,7 +37,6 @@ export function AdminTopbar({ username, onMenuClick }: AdminTopbarProps) {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <SiteTranslator />
             <ThemeToggle />
             <Button variant="ghost" className="gap-2" onClick={() => setConfirmOpen(true)}>
               <LogOut className="h-4 w-4" />

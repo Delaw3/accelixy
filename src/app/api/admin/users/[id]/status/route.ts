@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminUser } from "@/lib/auth/guards";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
+import { accountStatusTemplate } from "@/lib/mail/admin-templates";
+import { sendMailSafely } from "@/lib/mail/notify";
 import User from "@/lib/models/user.model";
+import { capitalizeFirstLetter } from "@/lib/utils";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -35,12 +40,47 @@ export async function PATCH(request: Request, { params }: Params) {
     { $set: { isActive: parsed.data.isActive } },
     { new: true },
   )
-    .select("_id isActive")
-    .lean<{ _id: { toString: () => string }; isActive?: boolean } | null>();
+    .select("_id isActive firstname lastname username email")
+    .lean<
+      {
+        _id: { toString: () => string };
+        isActive?: boolean;
+        firstname?: string;
+        lastname?: string;
+        username?: string;
+        email?: string;
+      } | null
+    >();
 
   if (!updated) {
     return NextResponse.json({ ok: false, message: "User not found" }, { status: 404 });
   }
+
+  if (updated.email) {
+    const displayName =
+      `${capitalizeFirstLetter(updated.firstname)} ${capitalizeFirstLetter(updated.lastname)}`.trim() ||
+      updated.username ||
+      "Investor";
+    const statusMail = accountStatusTemplate({
+      name: displayName,
+      isActive: updated.isActive !== false,
+    });
+    await sendMailSafely(
+      {
+        to: updated.email,
+        subject: statusMail.subject,
+        html: statusMail.html,
+        text: statusMail.text,
+        attachments: statusMail.attachments,
+      },
+      "account status notice",
+    );
+  }
+
+  await delCache([
+    cacheKeys.adminUsersList,
+    cacheKeys.userSummary(updated._id.toString()),
+  ]);
 
   return NextResponse.json({
     ok: true,

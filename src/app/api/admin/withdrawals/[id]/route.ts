@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdminUser } from "@/lib/auth/guards";
+import { delCache } from "@/lib/cache/cache";
+import { cacheKeys } from "@/lib/cache/keys";
 import { connectDB } from "@/lib/db/mongoose";
 import TransactionNotification from "@/lib/models/transaction-notification.model";
 import UserWallet from "@/lib/models/user-wallet.model";
@@ -36,6 +38,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     let result: { id: string; status: "PENDING" | "APPROVED" | "REJECTED" } | null = null;
+    let affectedUserId: string | null = null;
 
     await dbSession.withTransaction(async () => {
       const withdrawal = await Withdrawal.findById(id).session(dbSession);
@@ -79,10 +82,19 @@ export async function PATCH(request: Request, { params }: Params) {
       );
 
       result = { id: withdrawal._id.toString(), status: withdrawal.status };
+      affectedUserId = withdrawal.userId.toString();
     });
 
     if (!result) {
       throw new Error("UPDATE_FAILED");
+    }
+
+    if (affectedUserId) {
+      await delCache([
+        cacheKeys.adminWithdrawalsList,
+        cacheKeys.adminUsersList,
+        cacheKeys.userSummary(affectedUserId),
+      ]);
     }
 
     return NextResponse.json({
@@ -127,11 +139,13 @@ export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
   await connectDB();
 
-  const existing = await Withdrawal.findById(id).select("status").lean<{ status?: "PENDING" | "APPROVED" | "REJECTED" } | null>();
-  if (!existing) {
+  const existingWithUser = await Withdrawal.findById(id)
+    .select("status userId")
+    .lean<{ status?: "PENDING" | "APPROVED" | "REJECTED"; userId?: { toString: () => string } } | null>();
+  if (!existingWithUser) {
     return NextResponse.json({ ok: false, message: "Withdrawal not found" }, { status: 404 });
   }
-  if (existing.status !== "PENDING") {
+  if (existingWithUser.status !== "PENDING") {
     return NextResponse.json(
       { ok: false, message: "Processed withdrawals cannot be deleted." },
       { status: 400 },
@@ -142,6 +156,12 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (!deleted) {
     return NextResponse.json({ ok: false, message: "Withdrawal not found" }, { status: 404 });
   }
+
+  const keysToDelete = [cacheKeys.adminWithdrawalsList, cacheKeys.adminUsersList];
+  if (existingWithUser.userId) {
+    keysToDelete.push(cacheKeys.userSummary(existingWithUser.userId.toString()));
+  }
+  await delCache(keysToDelete);
 
   return NextResponse.json({
     ok: true,
