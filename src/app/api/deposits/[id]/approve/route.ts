@@ -33,13 +33,13 @@ export async function PATCH(_request: Request, { params }: Params) {
   const dbSession = await mongoose.startSession();
 
   try {
-    let result: {
+    let approvalResult!: {
       depositId: string;
       creditedAmount: number;
       referralRewardAmount: number;
       referralRewarded: boolean;
       userId: string;
-    } | null = null;
+    };
 
     await dbSession.withTransaction(async () => {
       const deposit = await DepositHistory.findOne({
@@ -51,7 +51,7 @@ export async function PATCH(_request: Request, { params }: Params) {
       }
 
       if (deposit.status === "APPROVED") {
-        result = {
+        approvalResult = {
           depositId: deposit._id.toString(),
           creditedAmount: deposit.amountUsd,
           referralRewardAmount: 0,
@@ -149,7 +149,7 @@ export async function PATCH(_request: Request, { params }: Params) {
         }
       }
 
-      result = {
+      approvalResult = {
         depositId: deposit._id.toString(),
         creditedAmount: deposit.amountUsd,
         referralRewardAmount,
@@ -158,12 +158,8 @@ export async function PATCH(_request: Request, { params }: Params) {
       };
     });
 
-    if (!result) {
-      throw new Error("APPROVAL_FAILED");
-    }
-
     await delCache([
-      cacheKeys.userSummary(result.userId),
+      cacheKeys.userSummary(approvalResult.userId),
       cacheKeys.adminUsersList,
     ]);
 
@@ -171,10 +167,10 @@ export async function PATCH(_request: Request, { params }: Params) {
       ok: true,
       message: "Deposit approved successfully",
       data: {
-        depositId: result.depositId,
-        creditedAmount: result.creditedAmount,
-        referralRewardAmount: result.referralRewardAmount,
-        referralRewarded: result.referralRewarded,
+        depositId: approvalResult.depositId,
+        creditedAmount: approvalResult.creditedAmount,
+        referralRewardAmount: approvalResult.referralRewardAmount,
+        referralRewarded: approvalResult.referralRewarded,
       },
     });
   } catch (error) {

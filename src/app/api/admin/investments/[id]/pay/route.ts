@@ -31,22 +31,20 @@ export async function POST(_request: Request, { params }: Params) {
   const dbSession = await mongoose.startSession();
 
   try {
-    let result:
-      | {
-          id: string;
-          payoutAmount: number;
-          status: "PAID";
-        }
-      | null = null;
-    let payoutMailPayload:
-      | {
-          to: string;
-          name: string;
-          amount: string;
-          plan: string;
-        }
-      | null = null;
-    let affectedUserId: string | null = null;
+    let payoutResult!: {
+      id: string;
+      payoutAmount: number;
+      status: "PAID";
+      userId: string;
+      mail:
+        | {
+            to: string;
+            name: string;
+            amount: string;
+            plan: string;
+          }
+        | null;
+    };
 
     await dbSession.withTransaction(async () => {
       const investment = await Investment.findOneAndUpdate(
@@ -98,12 +96,13 @@ export async function POST(_request: Request, { params }: Params) {
         .session(dbSession)
         .lean<{ firstname?: string; lastname?: string; username?: string; email?: string } | null>();
 
+      let mailPayload: { to: string; name: string; amount: string; plan: string } | null = null;
       if (user?.email) {
         const displayName =
           `${capitalizeFirstLetter(user.firstname)} ${capitalizeFirstLetter(user.lastname)}`.trim() ||
           user.username ||
           "Investor";
-        payoutMailPayload = {
+        mailPayload = {
           to: user.email,
           name: displayName,
           amount: formatUsd(payoutAmount),
@@ -111,27 +110,24 @@ export async function POST(_request: Request, { params }: Params) {
         };
       }
 
-      result = {
+      payoutResult = {
         id: investment._id.toString(),
         payoutAmount,
         status: "PAID",
+        userId: investment.userId.toString(),
+        mail: mailPayload,
       };
-      affectedUserId = investment.userId.toString();
     });
 
-    if (!result) {
-      throw new Error("PAYMENT_FAILED");
-    }
-
-    if (payoutMailPayload) {
+    if (payoutResult.mail) {
       const payoutMail = investmentPaidTemplate({
-        name: payoutMailPayload.name,
-        amount: payoutMailPayload.amount,
-        plan: payoutMailPayload.plan,
+        name: payoutResult.mail.name,
+        amount: payoutResult.mail.amount,
+        plan: payoutResult.mail.plan,
       });
       await sendMailSafely(
         {
-          to: payoutMailPayload.to,
+          to: payoutResult.mail.to,
           subject: payoutMail.subject,
           html: payoutMail.html,
           text: payoutMail.text,
@@ -141,18 +137,20 @@ export async function POST(_request: Request, { params }: Params) {
       );
     }
 
-    if (affectedUserId) {
-      await delCache([
-        cacheKeys.adminInvestmentsList,
-        cacheKeys.adminUsersList,
-        cacheKeys.userSummary(affectedUserId),
-      ]);
-    }
+    await delCache([
+      cacheKeys.adminInvestmentsList,
+      cacheKeys.adminUsersList,
+      cacheKeys.userSummary(payoutResult.userId),
+    ]);
 
     return NextResponse.json({
       ok: true,
       message: "Investment payout completed",
-      data: result,
+      data: {
+        id: payoutResult.id,
+        payoutAmount: payoutResult.payoutAmount,
+        status: payoutResult.status,
+      },
     });
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_PAYABLE") {
