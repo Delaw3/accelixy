@@ -76,7 +76,7 @@ export function GlobalLoadingSignal() {
           <div className="relative flex items-center justify-center">
             <div className="absolute h-28 w-28 animate-pulse rounded-full bg-primary/15 blur-xl" />
             <Image
-              src="/brand/Logo.png"
+              src="/brand/logo.png"
               alt="Accelixy"
               width={220}
               height={66}
