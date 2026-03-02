@@ -1,4 +1,5 @@
 import type { Attachment } from "nodemailer/lib/mailer";
+import path from "path";
 
 export const ACCELIXY_WHITE_LOGO_CID = "accelixy-white-logo";
 
@@ -18,7 +19,7 @@ export function withLineBreaks(value: string) {
 export function accelixyLogoAttachment(): Attachment {
   return {
     filename: "white.png",
-    path: `${process.cwd()}\\public\\brand\\white.png`,
+    path: path.join(process.cwd(), "public", "brand", "white.png"),
     cid: ACCELIXY_WHITE_LOGO_CID,
   };
 }
