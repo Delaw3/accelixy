@@ -47,9 +47,9 @@ export function Navbar() {
           </ul>
           <Link
             href="/login"
-            className="rounded-md border border-border bg-card px-3 py-1 text-sm font-semibold text-foreground transition hover:border-primary"
+            className="rounded-md border border-primary bg-primary px-3 py-1 text-sm font-semibold text-secondary transition hover:opacity-90"
           >
-            Account
+            Login
           </Link>
           <div className="flex items-center gap-2">
             <SiteTranslator />
@@ -92,10 +92,10 @@ export function Navbar() {
           ))}
           <Link
             href="/login"
-            className="mt-1 inline-flex items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:border-primary"
+            className="mt-1 inline-flex items-center justify-center rounded-md border border-primary bg-primary px-4 py-2 text-sm font-semibold text-secondary transition hover:opacity-90"
             onClick={() => setOpen(false)}
           >
-            Account
+            Login
           </Link>
         </div>
       </div>

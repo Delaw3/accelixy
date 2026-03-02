@@ -33,9 +33,9 @@ const INITIALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 const ACTIONS: ActionType[] = ["invested", "deposited", "withdrew"];
 
-const VISIBLE_MIN_MS = 4_000;
-const VISIBLE_MAX_MS = 7_000;
-const NEXT_GAP_MS = 1_200;
+const VISIBLE_MIN_MS = 3_000;
+const VISIBLE_MAX_MS = 5_500;
+const NEXT_GAP_MS = 2_200;
 
 function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -119,7 +119,7 @@ export function LiveActivityToasts() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -14, scale: 0.985 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="w-full max-w-md rounded-xl border border-border bg-card/95 px-4 py-3 text-sm text-foreground shadow-lg backdrop-blur"
+            className="w-full max-w-[280px] rounded-xl border border-border bg-card/95 px-3 py-2 text-xs text-foreground shadow-lg backdrop-blur sm:max-w-md sm:px-4 sm:py-3 sm:text-sm"
           >
             <span className="font-semibold text-primary">{activity.name}</span>{" "}
             from <span className="font-medium">{activity.country}</span>{" "}

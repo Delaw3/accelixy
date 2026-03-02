@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { buttonStyles } from "@/components/ui/button";
 
 export default function TermsPage() {
@@ -84,6 +85,7 @@ export default function TermsPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

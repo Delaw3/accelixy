@@ -8,6 +8,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 import { ContactForm } from "@/components/landing/ContactForm";
 import { HeroCarousel } from "@/components/landing/HeroCarousel";
 import { HomePageLoader } from "@/components/landing/HomePageLoader";
@@ -16,6 +17,7 @@ import { AboutStatsStrip } from "@/components/landing/AboutStatsStrip";
 import { PlansSection } from "@/components/landing/PlansSection";
 import { ScrollFadeIn } from "@/components/landing/ScrollFadeIn";
 import { SupportedPaymentMethods } from "@/components/landing/SupportedPaymentMethods";
+import { TestimonialsRotator } from "@/components/landing/TestimonialsRotator";
 import { CoinConverter } from "@/components/market/CoinConverter";
 import { TradingViewAdvancedChart } from "@/components/market/TradingViewAdvancedChart";
 import { TradingViewTickerTape } from "@/components/market/TradingViewTickerTape";
@@ -241,6 +243,10 @@ export default function LandingPage() {
           </ScrollFadeIn>
 
           <ScrollFadeIn>
+            <TestimonialsRotator />
+          </ScrollFadeIn>
+
+          <ScrollFadeIn>
             <section id="converter" className="mx-auto w-full max-w-6xl px-4 py-14 md:px-6">
               <h2 className="text-2xl font-semibold md:text-3xl">Market Tools</h2>
               <p className="mt-3 max-w-3xl text-muted">
@@ -273,14 +279,26 @@ export default function LandingPage() {
           </ScrollFadeIn>
 
           <ScrollFadeIn>
-            <section id="terms" className="mx-auto w-full max-w-6xl px-4 py-14 md:px-6">
-              <h2 className="text-2xl font-semibold md:text-3xl">Terms of services</h2>
-              <ul className="mt-4 space-y-2 text-sm text-muted">
-                <li>Investing carries risk and does not guarantee profit.</li>
-                <li>Users are responsible for their account credentials and access security.</li>
-                <li>Service plans are billed monthly and can be changed at any billing cycle.</li>
-                <li>Platform features may evolve as market and compliance requirements change.</li>
-              </ul>
+            <section className="mx-auto w-full max-w-6xl px-4 py-14 md:px-6">
+              <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 md:p-10">
+                <div className="pointer-events-none absolute inset-0 opacity-40">
+                  <div className="absolute -left-16 top-0 h-44 w-44 rounded-full bg-primary/20 blur-2xl" />
+                  <div className="absolute -right-14 bottom-0 h-44 w-44 rounded-full bg-primary/20 blur-2xl" />
+                </div>
+
+                <div className="relative text-center">
+                  <h2 className="text-3xl font-semibold md:text-4xl">Ready to Start Growing?</h2>
+                  <p className="mx-auto mt-3 max-w-2xl text-muted md:text-lg">
+                    Open your Accelixy account today and begin your digital asset journey with
+                    structured plans and transparent tracking.
+                  </p>
+                  <div className="mt-6">
+                    <Link href="/register" className={buttonStyles("gradient")}>
+                      Get Started
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </section>
           </ScrollFadeIn>
 
@@ -296,9 +314,7 @@ export default function LandingPage() {
           </ScrollFadeIn>
         </main>
 
-        <footer className="border-t border-border py-6 text-center text-sm text-muted">
-          <p>&copy; {new Date().getFullYear()} Accelixy. All rights reserved.</p>
-        </footer>
+        <SiteFooter />
 
         <LiveActivityToasts />
       </div>

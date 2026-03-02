@@ -138,10 +138,10 @@ export function HeroCarousel() {
                 Get Started
               </Link>
               <Link
-                href="#plans"
+                href="/login"
                 className={buttonStyles("ghost", "border-white/40 text-white hover:border-primary")}
               >
-                View Plans
+                Login
               </Link>
             </motion.div>
           </motion.div>
