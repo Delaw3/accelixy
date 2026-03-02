@@ -13,7 +13,7 @@ export function SiteFooter() {
 
       <div className="relative mx-auto w-full max-w-6xl px-4 py-10 text-center md:px-6 md:py-12">
         <div className="flex justify-center">
-          <Logo width={210} height={62} />
+          <Logo width={210} height={62} className="scale-75 sm:scale-100" />
         </div>
 
         <p className="mx-auto mt-5 max-w-3xl text-sm leading-7 text-muted md:text-[1.05rem]">
@@ -37,3 +37,4 @@ export function SiteFooter() {
     </footer>
   );
 }
+
