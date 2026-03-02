@@ -28,7 +28,7 @@ export function SupportedPaymentMethods() {
         Deposit securely with our currently supported crypto payment options.
       </p>
 
-      <div className="mt-6 flex items-start justify-start gap-2 overflow-x-auto pb-1 md:flex-wrap md:justify-center md:gap-x-10 md:gap-y-3 md:overflow-visible md:pb-0">
+      <div className="mt-6 flex flex-wrap items-start justify-center gap-2 md:gap-x-10 md:gap-y-3">
         {DEPOSIT_METHODS.map((method) => {
           const icons = iconByMethod[method.method];
           const TokenIcon = icons.token;
