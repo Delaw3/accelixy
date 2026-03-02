@@ -1,7 +1,17 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { buttonStyles } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Rules and Agreements",
+  description:
+    "Read Accelixy's rules and agreements, including platform usage requirements, security commitments, and member responsibilities.",
+  alternates: {
+    canonical: "/terms",
+  },
+};
 
 export default function TermsPage() {
   return (

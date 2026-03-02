@@ -1,8 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { buttonStyles } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "About Accelixy",
+  description:
+    "Learn about Accelixy's crypto mining operations, diversified digital-asset investment approach, and commitment to security and transparency.",
+  alternates: {
+    canonical: "/about",
+  },
+};
 
 export default function AboutReadMorePage() {
   return (

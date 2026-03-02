@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -22,6 +23,15 @@ import { CoinConverter } from "@/components/market/CoinConverter";
 import { TradingViewAdvancedChart } from "@/components/market/TradingViewAdvancedChart";
 import { TradingViewTickerTape } from "@/components/market/TradingViewTickerTape";
 import { buttonStyles } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Crypto Mining and Digital Asset Investment",
+  description:
+    "Explore Accelixy for crypto mining infrastructure, structured digital asset plans, secure account operations, and transparent portfolio tracking.",
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const services: { title: string; description: string; icon: LucideIcon }[] = [
   {
