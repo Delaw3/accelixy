@@ -115,11 +115,11 @@ export default function AboutReadMorePage() {
         </section>
 
         <section className="mt-12 overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="h-1 w-full bg-gradient-to-r from-primaryGradientStart to-primaryGradientEnd" />
+          <div className="h-1 w-full bg-linear-to-r from-primaryGradientStart to-primaryGradientEnd" />
           <div className="px-6 py-10 text-center md:px-10">
             <h2 className="text-3xl font-semibold md:text-5xl">
               ACCELIXY
-              <span className="block bg-gradient-to-r from-primaryGradientStart to-primaryGradientEnd bg-clip-text text-transparent">
+              <span className="block bg-linear-to-r from-primaryGradientStart to-primaryGradientEnd bg-clip-text text-transparent">
                 DIGITAL ASSET COMPANY
               </span>
             </h2>

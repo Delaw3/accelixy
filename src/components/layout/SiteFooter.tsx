@@ -31,7 +31,7 @@ export function SiteFooter() {
         </div>
 
         <p className="mt-6 text-sm text-muted">
-          COPYRIGHT &copy; {new Date().getFullYear()}. All Rights Reserved By accelixy.com
+          COPYRIGHT &copy; 2024. All Rights Reserved By accelixy.com. London, United Kingdom
         </p>
       </div>
     </footer>

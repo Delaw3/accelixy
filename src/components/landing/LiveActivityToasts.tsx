@@ -110,7 +110,7 @@ export function LiveActivityToasts() {
   }, [isVisible, counter]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 sm:bottom-6">
+    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 sm:bottom-6">
       <AnimatePresence mode="wait">
         {isVisible ? (
           <motion.div
