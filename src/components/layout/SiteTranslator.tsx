@@ -18,6 +18,7 @@ declare global {
 
 const SCRIPT_ID = "google-translate-script";
 const SCRIPT_SRC = "https://translate.google.com/translate_a/element.js";
+const PENDING_LANGUAGE_KEY = "site_translator_pending_language";
 const FALLBACK_LANGUAGES = [
   { value: "es", label: "Spanish" },
   { value: "fr", label: "French" },
@@ -32,6 +33,23 @@ export function SiteTranslator() {
   const rawId = useId();
   const containerId = `google_translate_${rawId.replace(/[:]/g, "")}`;
   const [showFallback, setShowFallback] = useState(false);
+
+  const applyLanguageToGoogleSelect = (language: string) => {
+    const googleSelects = Array.from(
+      document.querySelectorAll("select.goog-te-combo")
+    ) as HTMLSelectElement[];
+
+    if (googleSelects.length === 0) {
+      return false;
+    }
+
+    for (const select of googleSelects) {
+      select.value = language;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    return true;
+  };
 
   const activateFallback = () => {
     if (!initializedRef.current) {
@@ -49,7 +67,11 @@ export function SiteTranslator() {
       }
 
       const container = document.getElementById(containerId);
-      if (!container || container.childElementCount > 0) {
+      if (!container) {
+        return;
+      }
+
+      if (container.childElementCount > 0) {
         initializedRef.current = true;
         return;
       }
@@ -64,6 +86,13 @@ export function SiteTranslator() {
         const combo = document.querySelector(`#${containerId} select.goog-te-combo`);
         if (!combo) {
           setShowFallback(true);
+          return;
+        }
+
+        setShowFallback(false);
+        const pendingLanguage = window.localStorage.getItem(PENDING_LANGUAGE_KEY);
+        if (pendingLanguage && applyLanguageToGoogleSelect(pendingLanguage)) {
+          window.localStorage.removeItem(PENDING_LANGUAGE_KEY);
         }
       }, 700);
     };
@@ -111,28 +140,23 @@ export function SiteTranslator() {
       return;
     }
 
-    const googleSelect = document.querySelector(
-      `#${containerId} select.goog-te-combo`
-    ) as HTMLSelectElement | null;
-
-    if (googleSelect) {
-      googleSelect.value = language;
-      googleSelect.dispatchEvent(new Event("change"));
+    if (applyLanguageToGoogleSelect(language)) {
+      setShowFallback(false);
       return;
     }
 
-    // Fallback for cases where Google widget markup is delayed:
-    // set translation preference cookie and reload same page.
+    // Persist intent so it can be applied once the widget finishes loading.
+    window.localStorage.setItem(PENDING_LANGUAGE_KEY, language);
     const cookieValue = `/en/${language}`;
     document.cookie = `googtrans=${cookieValue}; path=/`;
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
-    window.location.reload();
+    setShowFallback(false);
   };
 
   return (
     <div className="translator-shell inline-flex h-7 items-center gap-1 rounded-md border border-border bg-card px-1.5 transition hover:border-primary">
       <Languages className="h-3 w-3 shrink-0 text-primary" />
       <div className="min-w-23">
+        <div id={containerId} className={showFallback ? "hidden" : undefined} />
         {showFallback ? (
           <select
             aria-label="Select language"
@@ -147,9 +171,7 @@ export function SiteTranslator() {
               </option>
             ))}
           </select>
-        ) : (
-          <div id={containerId} />
-        )}
+        ) : null}
       </div>
     </div>
   );
