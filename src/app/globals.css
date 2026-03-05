@@ -71,10 +71,19 @@
     font-size: 0.68rem;
     line-height: 1.1;
     outline: none;
+    min-height: 1.45rem;
+    appearance: auto;
+    -webkit-appearance: menulist;
   }
 
   .translator-shell .goog-te-combo:focus {
     border-color: hsl(var(--primary));
+  }
+
+  .translator-shell select.goog-te-combo {
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    border-color: hsl(var(--border)) !important;
   }
 
   .translator-shell .goog-logo-link,
@@ -82,7 +91,6 @@
     display: none;
   }
 
-  .translator-shell .goog-te-gadget > span,
   .translator-shell .VIpgJd-ZVi9od-l4eHX-hSRGPd {
     display: none !important;
   }

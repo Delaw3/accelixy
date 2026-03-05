@@ -70,35 +70,32 @@ export function Navbar() {
         </div>
       </nav>
 
-      <div
-        className={cn(
-          "border-t border-border bg-background px-4 py-4 lg:hidden",
-          open ? "block" : "hidden"
-        )}
-      >
-        <div className="flex flex-col gap-3">
-          <div className="w-fit">
-            <SiteTranslator />
-          </div>
-          {navLinks.map((link) => (
+      {open ? (
+        <div className={cn("border-t border-border bg-background px-4 py-4 lg:hidden")}>
+          <div className="flex flex-col gap-3">
+            <div className="w-fit">
+              <SiteTranslator />
+            </div>
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={resolveHref(link.href)}
+                className="text-sm text-muted transition hover:text-foreground"
+                onClick={() => setOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
             <Link
-              key={link.href}
-              href={resolveHref(link.href)}
-              className="text-sm text-muted transition hover:text-foreground"
+              href="/login"
+              className="mt-1 inline-flex items-center justify-center rounded-md border border-primary bg-primary px-4 py-2 text-sm font-semibold text-secondary transition hover:opacity-90"
               onClick={() => setOpen(false)}
             >
-              {link.label}
+              Login
             </Link>
-          ))}
-          <Link
-            href="/login"
-            className="mt-1 inline-flex items-center justify-center rounded-md border border-primary bg-primary px-4 py-2 text-sm font-semibold text-secondary transition hover:opacity-90"
-            onClick={() => setOpen(false)}
-          >
-            Login
-          </Link>
+          </div>
         </div>
-      </div>
+      ) : null}
     </header>
   );
 }
