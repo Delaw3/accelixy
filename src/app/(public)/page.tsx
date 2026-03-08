@@ -15,6 +15,7 @@ import { HeroCarousel } from "@/components/landing/HeroCarousel";
 import { HomePageLoader } from "@/components/landing/HomePageLoader";
 import { LiveActivityToasts } from "@/components/landing/LiveActivityToasts";
 import { AboutStatsStrip } from "@/components/landing/AboutStatsStrip";
+import { CertificateModalTrigger } from "@/components/landing/CertificateModalTrigger";
 import { PlansSection } from "@/components/landing/PlansSection";
 import { ScrollFadeIn } from "@/components/landing/ScrollFadeIn";
 import { SupportedPaymentMethods } from "@/components/landing/SupportedPaymentMethods";
@@ -105,14 +106,11 @@ export default function LandingPage() {
                     <Link href="/about" className={buttonStyles("gradient")}>
                       Read More
                     </Link>
-                    <a
-                      href="https://lagpvwdlpjmuuxzukczh.supabase.co/storage/v1/object/public/Accelixy-Bucket/pictures/accelixy-cert.png"
-                      target="_blank"
-                      rel="noreferrer"
+                    <CertificateModalTrigger
                       className={buttonStyles("ghost")}
-                    >
-                      Certificate
-                    </a>
+                      imageSrc="https://lagpvwdlpjmuuxzukczh.supabase.co/storage/v1/object/public/Accelixy-Bucket/pictures/accelixy-cert.png"
+                      imageAlt="Accelixy certificate"
+                    />
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-xl border border-border bg-card">

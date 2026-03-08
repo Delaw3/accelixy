@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { signOut } from "next-auth/react";
+import { useEffect, useState } from "react";
 import {
   CircleDollarSign,
   HandCoins,
@@ -38,6 +39,24 @@ const userSidebarBannerSrc =
 
 export function DashboardShell({ username, role, children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isBackLogoutConfirmOpen, setIsBackLogoutConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    const guardState = { dashboardBackGuard: true };
+    window.history.pushState(guardState, "", window.location.href);
+
+    const onPopState = () => {
+      window.history.pushState(guardState, "", window.location.href);
+      setIsBackLogoutConfirmOpen(true);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  const handleLogoutFromBackPrompt = () => {
+    void signOut({ callbackUrl: "/" });
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -79,6 +98,33 @@ export function DashboardShell({ username, role, children }: DashboardShellProps
               className="h-[calc(100%-3.5rem)] border-r"
               onNavigate={() => setMobileOpen(false)}
             />
+          </div>
+        </div>
+      ) : null}
+
+      {isBackLogoutConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-lg">
+            <h4 className="text-lg font-semibold">Confirm Logout</h4>
+            <p className="mt-2 text-sm text-muted">
+              You pressed the browser back button. Do you want to logout and leave the dashboard?
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBackLogoutConfirmOpen(false)}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground hover:border-primary"
+              >
+                Stay Here
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutFromBackPrompt}
+                className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-secondary hover:opacity-90"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
