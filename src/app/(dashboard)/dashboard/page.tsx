@@ -1,4 +1,4 @@
-import { CircleDollarSign, PiggyBank, TrendingUp, Wallet } from "lucide-react";
+import { CircleDollarSign, PiggyBank, Wallet } from "lucide-react";
 import { auth } from "@/auth";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TransactionNotifications } from "@/components/dashboard/TransactionNotifications";
@@ -10,7 +10,6 @@ import User from "@/lib/models/user.model";
 import TransactionNotification from "@/lib/models/transaction-notification.model";
 import UserWalletAddress from "@/lib/models/user-wallet-address.model";
 import UserWallet from "@/lib/models/user-wallet.model";
-import UserStats from "@/lib/models/user-stats.model";
 import { getDashboardFinancialStats } from "@/lib/services/dashboard";
 
 const paymentTickerSymbols = [
@@ -58,7 +57,6 @@ export default async function DashboardPage() {
   };
   let walletBalance = 0;
   let walletCurrency = "USD";
-  let totalEarnings = 0;
   let currentInvestment = 0;
   let totalWithdrawals = 0;
   let transactionNotifications: {
@@ -71,7 +69,7 @@ export default async function DashboardPage() {
 
   if (userId) {
     await connectDB();
-    const [user, walletAddress, wallet, stats, computed, notifications] = await Promise.all([
+    const [user, walletAddress, wallet, computed, notifications] = await Promise.all([
       User.findById(userId)
         .select("firstname")
         .lean<{ firstname?: string }>(),
@@ -81,9 +79,6 @@ export default async function DashboardPage() {
         usdtBEP20?: string;
       }>(),
       UserWallet.findOne({ userId }).lean<{ balance?: number; currency?: "USD" }>(),
-      UserStats.findOne({ userId }).lean<{
-        totalEarnings?: number;
-      }>(),
       getDashboardFinancialStats(userId),
       TransactionNotification.find({ userId })
         .sort({ createdAt: -1 })
@@ -105,7 +100,6 @@ export default async function DashboardPage() {
     };
     walletBalance = wallet?.balance ?? 0;
     walletCurrency = wallet?.currency ?? "USD";
-    totalEarnings = stats?.totalEarnings ?? 0;
     currentInvestment = computed.currentInvestment;
     totalWithdrawals = computed.totalWithdrawals;
     transactionNotifications = notifications.map((item) => ({
@@ -128,11 +122,6 @@ export default async function DashboardPage() {
       label: "Current Investment",
       value: formatMoney(currentInvestment, walletCurrency),
       icon: PiggyBank,
-    },
-    {
-      label: "Total Earnings",
-      value: formatMoney(totalEarnings, walletCurrency),
-      icon: TrendingUp,
     },
     {
       label: "Total Withdrawals",
@@ -180,7 +169,7 @@ export default async function DashboardPage() {
           label={walletStat.label}
           value={walletStat.value}
         />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {compactStats.map((stat) => {
             const Icon = stat.icon;
             return (
