@@ -15,7 +15,7 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-const REFERRAL_RATE = 0.06;
+const REFERRAL_RATE = 0.03;
 
 export async function PATCH(_request: Request, { params }: Params) {
   const session = await auth();
